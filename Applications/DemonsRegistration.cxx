@@ -19,8 +19,10 @@
 #include <itkTransformFileReader.h>
 #if (ITK_VERSION_MAJOR < 4)
 #include <itkTransformToDeformationFieldSource.h>
-#else
+#elif (ITK_VERSION_MAJOR == 4) && (ITK_VERSION_MINOR < 6)
 #include <itkTransformToDisplacementFieldSource.h>
+#else
+#include <itkTransformToDisplacementFieldFilter.h>
 #endif
 #include <itkVectorCentralDifferenceImageFunction.h>
 #include <itkVectorLinearInterpolateNearestNeighborExtrapolateImageFunction.h>
@@ -746,8 +748,10 @@ void DemonsRegistrationFunction( arguments args )
       // Set up the TransformToDeformationFieldFilter
 #if (ITK_VERSION_MAJOR < 4)
       typedef itk::TransformToDeformationFieldSource<DeformationFieldType>  FieldGeneratorType;
-#else
+#elif (ITK_VERSION_MAJOR == 4) && (ITK_VERSION_MINOR < 6)
       typedef itk::TransformToDisplacementFieldSource<DeformationFieldType>  FieldGeneratorType;
+#else
+      typedef itk::TransformToDisplacementFieldFilter<DeformationFieldType>  FieldGeneratorType;
 #endif
       typedef typename FieldGeneratorType::TransformType TransformType;
 
@@ -764,10 +768,17 @@ void DemonsRegistrationFunction( arguments args )
       fieldGenerator->SetTransform( trsf );
       // fieldGenerator->SetOutputRegion(
       //   fixedImageReader->GetOutput()->GetRequestedRegion());
+#if   ( (ITK_VERSION_MAJOR > 4) || ((ITK_VERSION_MAJOR == 4) && (ITK_VERSION_MINOR >= 6)) )
+      fieldGenerator->SetSize(
+	fixedImageReader->GetOutput()->GetRequestedRegion().GetSize() );
+      fieldGenerator->SetOutputStartIndex(
+        fixedImageReader->GetOutput()->GetRequestedRegion().GetIndex() );
+#else
       fieldGenerator->SetOutputSize(
-        fixedImageReader->GetOutput()->GetRequestedRegion().GetSize() );
+	fixedImageReader->GetOutput()->GetRequestedRegion().GetSize() );
       fieldGenerator->SetOutputIndex(
         fixedImageReader->GetOutput()->GetRequestedRegion().GetIndex() );
+#endif
       fieldGenerator->SetOutputSpacing(
         fixedImageReader->GetOutput()->GetSpacing() );
       fieldGenerator->SetOutputOrigin(
